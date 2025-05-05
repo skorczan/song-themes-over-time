@@ -26,11 +26,16 @@ def ensure_database_is_initialized(db):
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS SONGS (
         id INTEGER PRIMARY KEY,
-        artist_id INTEGER FOREIGNKEY REFERENCES ARTISTS(id),
         album_id INTEGER FOREIGNKEY REFERENCES ALBUMS(id),
         release_date TEXT,
         title TEXT,
         lyrics TEXT
+    );''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS SONGS_AUTHORS (
+        song_id INTEGER FOREIGNKEY REFERENCES SONG(id) NOT NULL,
+        artist_id INTEGER FOREIGNKEY REFERENCES ARTISTS(id) NOT NULL,
+        UNIQUE(song_id, artist_id)
     );''')
 
 
@@ -81,7 +86,7 @@ def populate_songs_table(genius, db):
         cursor.execute('''SELECT a.id
                           FROM ARTISTS a
                           WHERE a.followers_count >= 50
-                                AND NOT EXISTS (SELECT s.id FROM SONGS s WHERE s.artist_id = a.id)
+                                AND NOT EXISTS (SELECT sa.song_id FROM SONGS_AUTHORS sa WHERE sa.artist_id = a.id)
                           ORDER BY RANDOM()
                        ''')
 
@@ -131,20 +136,20 @@ def populate_songs_by_artist(artist_id, genius, db):
 
             for song in data['songs']:
                 id = song['id']
-                title = song.get('title', 'UNKNOWN')
-                lyrics = grab_lyrics(song)
-                release_date = format_release_date(song)
 
                 saved_song = db.execute("SELECT * FROM SONGS WHERE id = ?", (id,)).fetchone()
 
                 if saved_song is None:
+                    title = song.get('title', 'UNKNOWN')
+                    lyrics = grab_lyrics(song)
+                    release_date = format_release_date(song)
+
                     db.execute(
-                        "INSERT INTO SONGS (id, artist_id, title, release_date, lyrics) VALUES (?, ?, ?, ?, ?)",
-                        (id, artist_id, title, release_date, lyrics),
+                        "INSERT INTO SONGS (id, title, release_date, lyrics) VALUES (?, ?, ?, ?)",
+                        (id, title, release_date, lyrics),
                     )
-                else:
-                    print(f'Song {id} already exists')
-                    raise ReferenceError(song)
+
+                db.execute("INSERT OR IGNORE INTO SONGS_AUTORS (song_id, artist_id) VALUES (?, ?)", (id, artist_id))
 
             page = data['next_page']
 
