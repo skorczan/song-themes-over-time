@@ -82,6 +82,7 @@ def populate_songs_table(genius, db):
                           FROM ARTISTS a
                           WHERE a.followers_count >= 50
                                 AND NOT EXISTS (SELECT s.id FROM SONGS s WHERE s.artist_id = a.id)
+                          ORDER BY RANDOM()
                        ''')
 
         while True:
@@ -91,15 +92,7 @@ def populate_songs_table(genius, db):
                 break
 
             for (artist_id,) in batch:
-                i = 0
-
-                while i < 5:
-                    try:
-                        populate_songs_by_artist(artist_id, genius, db)
-                        break
-                    except Exception as e:
-                        i += 1
-                        time.sleep(i)
+                populate_songs_by_artist(artist_id, genius, db)
 
 def populate_songs_by_artist(artist_id, genius, db):
 
@@ -158,11 +151,13 @@ def populate_songs_by_artist(artist_id, genius, db):
                     print(f'Artist id = {artist_id}')
                     print(f'Release date = {release_date}')
                     print(f'Title = {title}')
+                    raise ReferenceError(song)
 
             page = data['next_page']
 
             if page is None:
                 break
+
         db.commit()
 
 
