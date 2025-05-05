@@ -144,13 +144,6 @@ def populate_songs_by_artist(artist_id, genius, db):
                     )
                 else:
                     print(f'Song {id} already exists')
-                    print(f'Artist id = {song['artist_id']}')
-                    print(f'Release date = {song["release_date"]}')
-                    print(f'Title = {song["title"]}')
-                    print('Trying to save')
-                    print(f'Artist id = {artist_id}')
-                    print(f'Release date = {release_date}')
-                    print(f'Title = {title}')
                     raise ReferenceError(song)
 
             page = data['next_page']
