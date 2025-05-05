@@ -24,6 +24,9 @@ def ensure_database_is_initialized(db):
         title TEXT
     );''')
 
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_albums_artist_id ON ALBUMS(artist_id);')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_albums_release_date ON ALBUMS(release_date);')
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS SONGS (
         id INTEGER PRIMARY KEY,
         album_id INTEGER FOREIGNKEY REFERENCES ALBUMS(id),
@@ -32,11 +35,17 @@ def ensure_database_is_initialized(db):
         lyrics TEXT
     );''')
 
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_songs_album_id ON SONGS(album_id);');
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_songs_release_date ON SONGS(release_date);');
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS SONGS_AUTHORS (
         song_id INTEGER FOREIGNKEY REFERENCES SONG(id) NOT NULL,
         artist_id INTEGER FOREIGNKEY REFERENCES ARTISTS(id) NOT NULL,
-        UNIQUE(song_id, artist_id)
+        PRIMARY KEY (song_id, artist_id)
     );''')
+
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_songs_authors_artist_id ON SONGS_AUTHORS(artist_id);')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_songs_authors_song_id ON SONGS_AUTHORS(song_id);')
 
 
 def populate_artist_table(genius, db):
@@ -149,7 +158,7 @@ def populate_songs_by_artist(artist_id, genius, db):
                         (id, title, release_date, lyrics),
                     )
 
-                db.execute("INSERT OR IGNORE INTO SONGS_AUTORS (song_id, artist_id) VALUES (?, ?)", (id, artist_id))
+                db.execute("INSERT OR IGNORE INTO SONGS_AUTHORS (song_id, artist_id) VALUES (?, ?)", (id, artist_id))
 
             page = data['next_page']
 
@@ -167,9 +176,10 @@ def main():
 
     genius = Genius(token, timeout=10)
     # populate_artist_table(genius, db)
-    # populate_songs_table(genius, db)
-    populate_songs_by_artist(20, genius, db)
-    populate_songs_by_artist(21, genius, db)
+    populate_songs_table(genius, db)
+    #populate_songs_by_artist(1, genius, db)
+    #populate_songs_by_artist(20, genius, db)
+    #populate_songs_by_artist(21, genius, db)
 
 
 if __name__ == '__main__':
