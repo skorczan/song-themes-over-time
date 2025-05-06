@@ -142,6 +142,8 @@ def populate_songs_by_artist(artist_id, genius, db):
     with db:
         while True:
             data = genius.artist_songs(artist_id, page=page)
+            song_rows = []
+            song_author_rows = []
 
             for song in data['songs']:
                 id = song['id']
@@ -153,12 +155,17 @@ def populate_songs_by_artist(artist_id, genius, db):
                     lyrics = grab_lyrics(song)
                     release_date = format_release_date(song)
 
-                    db.execute(
-                        "INSERT INTO SONGS (id, title, release_date, lyrics) VALUES (?, ?, ?, ?)",
-                        (id, title, release_date, lyrics),
-                    )
+                    #db.execute(
+                    #    "INSERT INTO SONGS (id, title, release_date, lyrics) VALUES (?, ?, ?, ?)",
+                    #    (id, title, release_date, lyrics),
+                    #)
+                    song_rows.append((id, title, release_date, lyrics))
 
-                db.execute("INSERT OR IGNORE INTO SONGS_AUTHORS (song_id, artist_id) VALUES (?, ?)", (id, artist_id))
+                #db.execute("INSERT OR IGNORE INTO SONGS_AUTHORS (song_id, artist_id) VALUES (?, ?)", (id, artist_id))
+                song_author_rows.append((id, artist_id))
+
+            db.executemany("INSERT INTO SONGS (id, title, release_date, lyrics) VALUES (?, ?, ?, ?)", song_rows)
+            db.executemany("INSERT OR IGNORE INTO SONGS_AUTHORS (song_id, artist_id) VALUES (?, ?)", song_author_rows)
 
             page = data['next_page']
 
@@ -170,7 +177,10 @@ def populate_songs_by_artist(artist_id, genius, db):
 
 def main():
     token = environ.get('GENIUS_TOKEN')
+
     db = sqlite3.connect("songs.db")
+    db.execute("PRAGMA journal_mode = WAL;")
+    db.execute("PRAGMA synchronous = NORMAL;")
 
     ensure_database_is_initialized(db)
 
