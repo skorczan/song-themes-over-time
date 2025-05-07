@@ -347,7 +347,7 @@ def main():
 
     artist_scrapper = ArtistScrapper(artist_queue, data_keeper)
     song_scrapper = SongsScrapper(songs_queue, lyrics_queue, data_keeper)
-    lyrics_scrappers = [ SongLyricsScrapper(lyrics_queue, data_keeper) for _ in range(3) ]
+    lyrics_scrappers = [ SongLyricsScrapper(lyrics_queue, data_keeper) for _ in range(5) ]
     all_scrappers = [ artist_scrapper, song_scrapper ] + lyrics_scrappers
 
     def stop():
