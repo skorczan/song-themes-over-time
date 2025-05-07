@@ -357,7 +357,6 @@ def main():
         for thread in all_scrappers:
             thread.join(timeout=60)
 
-        data_keeper.flush()
         data_keeper.join(timeout=60)
 
     signal.signal(signal.SIGINT, lambda sig, frame: stop())
