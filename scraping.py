@@ -79,36 +79,50 @@ class DatabaseWriter:
                 print("not flushing because i'm clean")
                 return
 
-            self._db.execute("BEGIN")
-
-            try:
-                if self._artists:
-                    self._db.executemany(
-                        "INSERT OR IGNORE INTO ARTISTS (id, name, followers_count) VALUES (?, ?, ?)", self._artists)
-
-                if self._songs:
-                    self._db.executemany("INSERT OR IGNORE INTO SONGS (id, title, release_date) VALUES (?, ?, ?)", self._songs)
-
-                if self._lyrics:
-                    for (song_id, text) in self._lyrics:
-                        self._db.execute("UPDATE SONGS SET lyrics = ? WHERE id = ?", (text, song_id))
-
-                if self._songs_authors:
-                    self._db.executemany("INSERT OR IGNORE INTO SONGS_AUTHORS (song_id, artist_id) VALUES (?, ?)", self._songs_authors)
-
-                self._db.execute("COMMIT")
-                print("Artists saved:", len(self._artists))
-                print("Songs saved:", len(self._songs))
-                print("Lyrics saved:", len(self._lyrics))
-                print("Song authors saved:", len(self._songs_authors))
-            except:
-                self._db.execute("ROLLBACK")
-                raise
-
+            artists = self._artists
             self._artists = []
+
+            songs = self._songs
             self._songs = []
-            self._lyrics = []
+
+            songs_authors = self._songs_authors
             self._songs_authors = []
+
+            lyrics = self._lyrics
+            self._lyrics = []
+
+        self._db.execute("BEGIN")
+
+        try:
+            if artists:
+                self._db.executemany(
+                    "INSERT OR IGNORE INTO ARTISTS (id, name, followers_count) VALUES (?, ?, ?)", artists)
+
+            if songs:
+                self._db.executemany("INSERT OR IGNORE INTO SONGS (id, title, release_date) VALUES (?, ?, ?)", songs)
+
+            if lyrics:
+                for (song_id, text) in lyrics:
+                    self._db.execute("UPDATE SONGS SET lyrics = ? WHERE id = ?", (text, song_id))
+
+            if songs_authors:
+                self._db.executemany("INSERT OR IGNORE INTO SONGS_AUTHORS (song_id, artist_id) VALUES (?, ?)", songs_authors)
+
+            self._db.execute("COMMIT")
+            print("Artists saved:", len(artists))
+            print("Songs saved:", len(songs))
+            print("Lyrics saved:", len(lyrics))
+            print("Song authors saved:", len(songs_authors))
+        except:
+            self._db.execute("ROLLBACK")
+
+            with self._lock:
+                self._artists = artists + self._artists
+                self._songs = songs + self._songs
+                self._songs_authors = songs_authors + self._songs_authors
+                self._lyrics = lyrics + self._lyrics
+
+            raise
 
 
 class DataKeeper(threading.Thread, DatabaseWriter):
