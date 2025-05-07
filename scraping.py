@@ -52,12 +52,12 @@ class DatabaseWriter:
 
     def keep_artist(self, id, name, followers_count):
         with self._lock:
-            #print("adding artist", id)
+            print("adding artist", id)
             self._artists.append((id, name, followers_count))
 
     def keep_song(self, id, title, release_date):
         with self._lock:
-            #print("adding song", id)
+            print("adding song", id)
             self._songs.append((id, title, release_date))
 
     def keep_song_author(self, song_id, artist_id):
@@ -66,7 +66,7 @@ class DatabaseWriter:
 
     def keep_lyrics(self, song_id, text):
         with self._lock:
-            #print("adding lyrics", song_id)
+            print("adding lyrics", song_id)
             self._lyrics.append((song_id, text))
 
     @property
@@ -76,7 +76,7 @@ class DatabaseWriter:
     def flush(self):
         with self._lock:
             if not self.dirty:
-                #print("not flushing because i'm clean")
+                print("not flushing because i'm clean")
                 return
 
             self._db.execute("BEGIN")
@@ -97,10 +97,10 @@ class DatabaseWriter:
                     self._db.executemany("INSERT OR IGNORE INTO SONGS_AUTHORS (song_id, artist_id) VALUES (?, ?)", self._songs_authors)
 
                 self._db.execute("COMMIT")
-                #print("Artists saved:", len(self._artists))
-                #print("Songs saved:", len(self._songs))
-                #print("Lyrics saved:", len(self._lyrics))
-                #print("Song authors saved:", len(self._songs_authors))
+                print("Artists saved:", len(self._artists))
+                print("Songs saved:", len(self._songs))
+                print("Lyrics saved:", len(self._lyrics))
+                print("Song authors saved:", len(self._songs_authors))
             except:
                 self._db.execute("ROLLBACK")
                 raise
@@ -252,7 +252,7 @@ class SongLyricsScrapper(threading.Thread):
                     self._db.keep_lyrics(song_id, lyrics)
 
                 self._source.task_done()
-                #print("lyrics for song scrapped", song_id)
+                print("lyrics for song scrapped", song_id)
             except queue.Empty:
                 continue
 
@@ -355,9 +355,9 @@ def main():
 
     while not stop_event.is_set():
         time.sleep(1)
-        #print("artist queue:", artist_queue.qsize())
-        #print("song queue:", songs_queue.qsize())
-        #print("lyrics queue:", lyrics_queue.qsize())
+        print("artist queue:", artist_queue.qsize())
+        print("song queue:", songs_queue.qsize())
+        print("lyrics queue:", lyrics_queue.qsize())
 
 
 def open_database_connection():
@@ -365,7 +365,7 @@ def open_database_connection():
     db.execute("PRAGMA journal_mode = WAL;")
     db.execute("PRAGMA synchronous = NORMAL;")
     db.execute("PRAGMA busy_timeout = 60000;")
-    db.execute("PRAGMA busy_timeout = 60000;")
+    db.execute("PRAGMA foreign_keys = ON;")
     return db
 
 def genius_api():
@@ -381,7 +381,7 @@ def ensure_database_is_initialized(db):
 
     db.execute('''CREATE TABLE IF NOT EXISTS ALBUMS (
         id INTEGER PRIMARY KEY,
-        artist_id INTEGER FOREIGN KEY REFERENCES ARTISTS(id),
+        artist_id INTEGER REFERENCES ARTISTS(id),
         release_date TEXT,
         title TEXT
     );''')
@@ -391,7 +391,7 @@ def ensure_database_is_initialized(db):
 
     db.execute('''CREATE TABLE IF NOT EXISTS SONGS (
         id INTEGER PRIMARY KEY,
-        album_id INTEGER FOREIGNKEY REFERENCES ALBUMS(id),
+        album_id INTEGER REFERENCES ALBUMS(id),
         release_date TEXT,
         title TEXT,
         lyrics TEXT
@@ -401,13 +401,14 @@ def ensure_database_is_initialized(db):
     db.execute('CREATE INDEX IF NOT EXISTS idx_songs_release_date ON SONGS(release_date);')
 
     db.execute('''CREATE TABLE IF NOT EXISTS SONGS_AUTHORS (
-        song_id INTEGER FOREIGNKEY REFERENCES SONG(id) NOT NULL,
-        artist_id INTEGER FOREIGNKEY REFERENCES ARTISTS(id) NOT NULL,
+        song_id INTEGER REFERENCES SONG(id) NOT NULL,
+        artist_id INTEGER REFERENCES ARTISTS(id) NOT NULL,
         PRIMARY KEY (song_id, artist_id)
     );''')
 
     db.execute('CREATE INDEX IF NOT EXISTS idx_songs_authors_artist_id ON SONGS_AUTHORS(artist_id);')
     db.execute('CREATE INDEX IF NOT EXISTS idx_songs_authors_song_id ON SONGS_AUTHORS(song_id);')
+
 
 if __name__ == '__main__':
     main()
